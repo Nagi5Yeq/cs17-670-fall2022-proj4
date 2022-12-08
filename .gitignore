@@ -1,0 +1,5 @@
+*.o
+weerun
+.vscode
+xbyak_github
+.gdb_history
