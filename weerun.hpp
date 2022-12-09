@@ -13,11 +13,10 @@
 #include <unordered_map>
 #include <vector>
 
-extern "C" {
 #include "common.h"
+#include "illegal.h"
 #include "ir.h"
 #include "weewasm.h"
-}
 
 #define WASM_TYPE_FUNCTION 0x60
 #define WASM_TYPE_I32 0x7F
@@ -103,7 +102,7 @@ struct wasm_instance_t;
 
 struct wasm_func_t {
   wasm_func_decl_t* sig_;
-  uint32_t typeid_;
+  uint32_t typeidx_;
   std::vector<wasm_local_decl_t> locals_;
   std::vector<byte> code_;
 
@@ -252,5 +251,5 @@ struct wasm_e_box_t : public wasm_externref_t {
 };
 
 extern wasm_instance_t* active_instance;
-extern "C" uint32_t jit_enable;
-extern "C" uint32_t jit_check;
+extern uint32_t jit_enable;
+extern uint32_t jit_check;

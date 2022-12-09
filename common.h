@@ -8,11 +8,11 @@ typedef uint8_t byte;
 
 // Decode LEB128 values, enforcing the specified signedness and maximum range.
 // The argument {ptr} will be advanced to point after the decoded value.
-// If an error occurs (e.g. unterminated LEB, invalid value), {ptr} will be set to
-// NULL.
-int32_t  decode_i32leb(const byte* ptr, const byte* limit, ssize_t* len);
+// If an error occurs (e.g. unterminated LEB, invalid value), {ptr} will be set
+// to NULL.
+int32_t decode_i32leb(const byte* ptr, const byte* limit, ssize_t* len);
 uint32_t decode_u32leb(const byte* ptr, const byte* limit, ssize_t* len);
-int64_t  decode_i64leb(const byte* ptr, const byte* limit, ssize_t* len);
+int64_t decode_i64leb(const byte* ptr, const byte* limit, ssize_t* len);
 uint64_t decode_u64leb(const byte* ptr, const byte* limit, ssize_t* len);
 
 // Decode fixed-size integer values.
@@ -31,9 +31,22 @@ extern int g_disassemble;
 extern int g_indent;
 
 // Helper macros to trace and to print errors.
-#define TRACE(...) do { if(g_trace) fprintf(stderr, __VA_ARGS__); } while(0)
-#define TRACE_INDENT(...) do { for (int i = 0; i < g_indent; i++) fprintf(stderr, "  "); TRACE(__VA_ARGS__); } while(0)
-#define DISASS(...) do { if(g_disassemble) fprintf(stderr, __VA_ARGS__); } while(0)
+#define TRACE(...)                  \
+  do {                              \
+    if (g_trace)                    \
+      fprintf(stderr, __VA_ARGS__); \
+  } while (0)
+#define TRACE_INDENT(...)              \
+  do {                                 \
+    for (int i = 0; i < g_indent; i++) \
+      fprintf(stderr, "  ");           \
+    TRACE(__VA_ARGS__);                \
+  } while (0)
+#define DISASS(...)                 \
+  do {                              \
+    if (g_disassemble)              \
+      fprintf(stderr, __VA_ARGS__); \
+  } while (0)
 #define ERR(...) fprintf(stderr, __VA_ARGS__)
 
 // A helper struct that keeps track of the start and the current pointer of

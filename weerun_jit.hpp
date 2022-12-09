@@ -10,6 +10,8 @@
 #include <xbyak/xbyak.h>
 #include <xbyak/xbyak_bin2hex.h>
 
+void jit_trap();
+
 namespace reg {
 enum reg {
   rax = 0,

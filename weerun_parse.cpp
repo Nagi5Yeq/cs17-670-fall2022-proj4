@@ -26,7 +26,7 @@ void parse_element_section(wasm_module_t* module, buffer_t* buf);
 void parse_code_section(wasm_module_t* module, buffer_t* buf);
 void parse_data_section(wasm_module_t* module, buffer_t* buf);
 
-extern "C" wasm_module_t* parse(buffer_t* buf) {
+ wasm_module_t* parse(buffer_t* buf) {
   buf->ptr += 8;  // magic and version
   wasm_module_t* module = new wasm_module_t();
   module->num_import_funcs_ = 0;
@@ -79,12 +79,12 @@ extern "C" wasm_module_t* parse(buffer_t* buf) {
 
 wasm_instance_t* active_instance;
 
-uint32_t jit_enable = 1;
+uint32_t jit_enable = 0;
 uint32_t jit_check = 1;
 
 static uint64_t default_code_size = (1 << 20);
 
-extern "C" wasm_typed_value_t run(const byte* start,
+ wasm_typed_value_t run(const byte* start,
                                   const byte* end,
                                   uint32_t num_args,
                                   wasm_value_t* args) {
@@ -135,7 +135,7 @@ void parse_import_section(wasm_module_t* module, buffer_t* buf) {
         }
         wasm_func_t f;
         f.sig_ = &module->sigs_[imp.funcindex_];
-        f.typeid_ = imp.funcindex_;
+        f.typeidx_ = imp.funcindex_;
         f.run_ = result->second.run_;
         f.run_jit_ = result->second.run_jit_;
         module->funcs_.push_back(f);
@@ -155,7 +155,7 @@ void parse_function_section(wasm_module_t* module, buffer_t* buf) {
   for (uint32_t func : funcidxs) {
     wasm_func_t f;
     f.sig_ = &module->sigs_[func];
-    f.typeid_ = func;
+    f.typeidx_ = func;
     f.run_ = nullptr;
     module->funcs_.push_back(f);
   }
@@ -233,13 +233,13 @@ wasm_instance_t* wasm_module_t::create_instance() {
   for (uint32_t i = 0; i < globals_.size(); i++) {
     switch (globals_[i].type_.type_) {
       case WASM_TYPE_I32:
-        instance->globals_[i].val.i32 = globals_[i].val_.i32;
+        instance->globals_[i].i32 = globals_[i].val_.i32;
         break;
       case WASM_TYPE_F64:
-        instance->globals_[i].val.f64 = globals_[i].val_.f64;
+        instance->globals_[i].f64 = globals_[i].val_.f64;
         break;
       default:
-        instance->globals_[i].val.ref = globals_[i].val_.ref;
+        instance->globals_[i].ref = globals_[i].val_.ref;
         break;
     }
   }
@@ -295,13 +295,13 @@ void wasm_instance_t::push_frame(wasm_func_t* f) {
     wasm_value_t v;
     switch (local.type_) {
       case WASM_TYPE_I32:
-        v.val.i32 = 0;
+        v.i32 = 0;
         break;
       case WASM_TYPE_F64:
-        v.val.f64 = 0;
+        v.f64 = 0;
         break;
       case WASM_TYPE_EXTERNREF:
-        v.val.ref = nullptr;
+        v.ref = nullptr;
     }
     for (uint32_t i = 0; i < local.count_; i++) {
       frame.locals_.push_back(v);

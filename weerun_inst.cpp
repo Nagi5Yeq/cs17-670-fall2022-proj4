@@ -318,13 +318,13 @@ const struct wasm_inst_desc_t g_inst_desc[] = {
 static bool is_zero(wasm_value_t v, uint8_t type) {
   switch (type) {
     case WASM_TYPE_I32:
-      return v.val.i32 == 0;
+      return v.i32 == 0;
     case WASM_TYPE_F64:
-      return v.val.f64 == 0;
+      return v.f64 == 0;
     default:
       break;
   }
-  return v.val.ref == nullptr;
+  return v.ref == nullptr;
 }
 
 // fancy ops
@@ -436,7 +436,7 @@ static inline bool check_access(wasm_instance_t* ins,
 }
 
 static void run_unreachable(wasm_instance_t* ins, byte opcode) {
-  ins->trap(WASM_OP_UNREACHABLE);
+  ins->trap(WASM_TRAP_REASON_UNREACHABLE);
 }
 
 static void run_nop(wasm_instance_t* ins, byte opcode) {}
@@ -486,18 +486,18 @@ static void run_global_set(wasm_instance_t* ins, byte opcode) {
 static void run_tabel_get(wasm_instance_t* ins, byte opcode) {
   uint32_t idx = ins->read_u32leb();
   wasm_value_t v;
-  v.val.ref = (void*)ins->table_[idx];
+  v.ref = (void*)ins->table_[idx];
   ins->push_value(v);
 }
 
 static void run_tabel_set(wasm_instance_t* ins, byte opcode) {
   uint32_t idx = ins->read_u32leb();
-  ins->table_[idx] = (wasm_func_t*)ins->pop_value().val.ref;
+  ins->table_[idx] = (wasm_func_t*)ins->pop_value().ref;
 }
 #endif
 
 static void run_i32_load(wasm_instance_t* ins, byte opcode) {
-  uint32_t addend = ins->pop_value().val.i32;
+  uint32_t addend = ins->pop_value().i32;
   ins->read_u32leb();
   uint32_t offset = ins->read_u32leb();
   if (check_access<uint32_t>(ins, offset, addend) == false) {
@@ -506,12 +506,12 @@ static void run_i32_load(wasm_instance_t* ins, byte opcode) {
   }
   byte* base = ins->memory_.data();
   wasm_value_t v;
-  v.val.i32 = *(uint32_t*)(base + (offset + addend));
+  v.i32 = *(uint32_t*)(base + (offset + addend));
   ins->push_value(v);
 }
 
 static void run_f64_load(wasm_instance_t* ins, byte opcode) {
-  uint32_t addend = ins->pop_value().val.i32;
+  uint32_t addend = ins->pop_value().i32;
   ins->read_u32leb();
   uint32_t offset = ins->read_u32leb();
   if (check_access<double>(ins, offset, addend) == false) {
@@ -520,12 +520,12 @@ static void run_f64_load(wasm_instance_t* ins, byte opcode) {
   }
   byte* base = ins->memory_.data();
   wasm_value_t v;
-  v.val.f64 = *(double*)(base + (offset + addend));
+  v.f64 = *(double*)(base + (offset + addend));
   ins->push_value(v);
 }
 
 static void run_i32_load8_u(wasm_instance_t* ins, byte opcode) {
-  uint32_t addend = ins->pop_value().val.i32;
+  uint32_t addend = ins->pop_value().i32;
   ins->read_u32leb();
   uint32_t offset = ins->read_u32leb();
   if (check_access<uint8_t>(ins, offset, addend) == false) {
@@ -535,12 +535,12 @@ static void run_i32_load8_u(wasm_instance_t* ins, byte opcode) {
   byte* base = ins->memory_.data();
   uint8_t u8 = *(uint8_t*)(base + (offset + addend));
   wasm_value_t v;
-  v.val.i32 = (uint32_t)u8;
+  v.i32 = (uint32_t)u8;
   ins->push_value(v);
 }
 
 static void run_i32_load8_s(wasm_instance_t* ins, byte opcode) {
-  uint32_t addend = ins->pop_value().val.i32;
+  uint32_t addend = ins->pop_value().i32;
   ins->read_u32leb();
   uint32_t offset = ins->read_u32leb();
   if (check_access<int8_t>(ins, offset, addend) == false) {
@@ -550,12 +550,12 @@ static void run_i32_load8_s(wasm_instance_t* ins, byte opcode) {
   byte* base = ins->memory_.data();
   int8_t i8 = *(int8_t*)(base + (offset + addend));
   wasm_value_t v;
-  v.val.i32 = (uint32_t)(int32_t)i8;
+  v.i32 = (uint32_t)(int32_t)i8;
   ins->push_value(v);
 }
 
 static void run_i32_load16_u(wasm_instance_t* ins, byte opcode) {
-  uint32_t addend = ins->pop_value().val.i32;
+  uint32_t addend = ins->pop_value().i32;
   ins->read_u32leb();
   uint32_t offset = ins->read_u32leb();
   if (check_access<uint16_t>(ins, offset, addend) == false) {
@@ -565,12 +565,12 @@ static void run_i32_load16_u(wasm_instance_t* ins, byte opcode) {
   byte* base = ins->memory_.data();
   uint16_t u16 = *(uint16_t*)(base + (offset + addend));
   wasm_value_t v;
-  v.val.i32 = (uint32_t)u16;
+  v.i32 = (uint32_t)u16;
   ins->push_value(v);
 }
 
 static void run_i32_load16_s(wasm_instance_t* ins, byte opcode) {
-  uint32_t addend = ins->pop_value().val.i32;
+  uint32_t addend = ins->pop_value().i32;
   ins->read_u32leb();
   uint32_t offset = ins->read_u32leb();
   if (check_access<int16_t>(ins, offset, addend) == false) {
@@ -580,13 +580,13 @@ static void run_i32_load16_s(wasm_instance_t* ins, byte opcode) {
   byte* base = ins->memory_.data();
   int16_t i16 = *(int16_t*)(base + (offset + addend));
   wasm_value_t v;
-  v.val.i32 = (uint32_t)(int32_t)i16;
+  v.i32 = (uint32_t)(int32_t)i16;
   ins->push_value(v);
 }
 
 static void run_i32_store(wasm_instance_t* ins, byte opcode) {
   wasm_value_t v = ins->pop_value();
-  uint32_t addend = ins->pop_value().val.i32;
+  uint32_t addend = ins->pop_value().i32;
   ins->read_u32leb();
   uint32_t offset = ins->read_u32leb();
   if (check_access<uint32_t>(ins, offset, addend) == false) {
@@ -594,12 +594,12 @@ static void run_i32_store(wasm_instance_t* ins, byte opcode) {
     return;
   }
   byte* base = ins->memory_.data();
-  *(uint32_t*)(base + (offset + addend)) = v.val.i32;
+  *(uint32_t*)(base + (offset + addend)) = v.i32;
 }
 
 static void run_f64_store(wasm_instance_t* ins, byte opcode) {
   wasm_value_t v = ins->pop_value();
-  uint32_t addend = ins->pop_value().val.i32;
+  uint32_t addend = ins->pop_value().i32;
   ins->read_u32leb();
   uint32_t offset = ins->read_u32leb();
   if (check_access<double>(ins, offset, addend) == false) {
@@ -607,12 +607,12 @@ static void run_f64_store(wasm_instance_t* ins, byte opcode) {
     return;
   }
   byte* base = ins->memory_.data();
-  *(double*)(base + (offset + addend)) = v.val.f64;
+  *(double*)(base + (offset + addend)) = v.f64;
 }
 
 static void run_i32_store8(wasm_instance_t* ins, byte opcode) {
   wasm_value_t v = ins->pop_value();
-  uint32_t addend = ins->pop_value().val.i32;
+  uint32_t addend = ins->pop_value().i32;
   ins->read_u32leb();
   uint32_t offset = ins->read_u32leb();
   if (check_access<uint8_t>(ins, offset, addend) == false) {
@@ -620,12 +620,12 @@ static void run_i32_store8(wasm_instance_t* ins, byte opcode) {
     return;
   }
   byte* base = ins->memory_.data();
-  *(uint8_t*)(base + (offset + addend)) = (uint8_t)v.val.i32;
+  *(uint8_t*)(base + (offset + addend)) = (uint8_t)v.i32;
 }
 
 static void run_i32_store16(wasm_instance_t* ins, byte opcode) {
   wasm_value_t v = ins->pop_value();
-  uint32_t addend = ins->pop_value().val.i32;
+  uint32_t addend = ins->pop_value().i32;
   ins->read_u32leb();
   uint32_t offset = ins->read_u32leb();
   if (check_access<uint16_t>(ins, offset, addend) == false) {
@@ -633,20 +633,20 @@ static void run_i32_store16(wasm_instance_t* ins, byte opcode) {
     return;
   }
   byte* base = ins->memory_.data();
-  *(uint16_t*)(base + (offset + addend)) = (uint16_t)v.val.i32;
+  *(uint16_t*)(base + (offset + addend)) = (uint16_t)v.i32;
 }
 
 static void run_i32_const(wasm_instance_t* ins, byte opcode) {
   uint32_t x = ins->read_i32leb();
   wasm_value_t v;
-  v.val.i32 = x;
+  v.i32 = x;
   ins->push_value(v);
 }
 
 static void run_f64_const(wasm_instance_t* ins, byte opcode) {
   double x = ins->read_double();
   wasm_value_t v;
-  v.val.f64 = x;
+  v.f64 = x;
   ins->push_value(v);
 }
 
@@ -658,164 +658,164 @@ static void run_i32_numeric(wasm_instance_t* ins, byte opcode) {
   b = ins->pop_value();
   switch (opcode) {
     case WASM_OP_I32_EQZ:
-      result.val.i32 = (b.val.i32 == 0);
+      result.i32 = (b.i32 == 0);
       break;
     case WASM_OP_I32_EQ:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 == b.val.i32);
+      result.i32 = (a.i32 == b.i32);
       break;
     case WASM_OP_I32_NE:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 != b.val.i32);
+      result.i32 = (a.i32 != b.i32);
       break;
     case WASM_OP_I32_LT_S:
       a = ins->pop_value();
-      result.val.i32 = ((int32_t)a.val.i32 < (int32_t)b.val.i32);
+      result.i32 = ((int32_t)a.i32 < (int32_t)b.i32);
       break;
     case WASM_OP_I32_LT_U:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 < b.val.i32);
+      result.i32 = (a.i32 < b.i32);
       break;
     case WASM_OP_I32_GT_S:
       a = ins->pop_value();
-      result.val.i32 = ((int32_t)a.val.i32 > (int32_t)b.val.i32);
+      result.i32 = ((int32_t)a.i32 > (int32_t)b.i32);
       break;
     case WASM_OP_I32_GT_U:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 > b.val.i32);
+      result.i32 = (a.i32 > b.i32);
       break;
     case WASM_OP_I32_LE_S:
       a = ins->pop_value();
-      result.val.i32 = ((int32_t)a.val.i32 <= (int32_t)b.val.i32);
+      result.i32 = ((int32_t)a.i32 <= (int32_t)b.i32);
       break;
     case WASM_OP_I32_LE_U:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 <= b.val.i32);
+      result.i32 = (a.i32 <= b.i32);
       break;
     case WASM_OP_I32_GE_S:
       a = ins->pop_value();
-      result.val.i32 = ((int32_t)a.val.i32 >= (int32_t)b.val.i32);
+      result.i32 = ((int32_t)a.i32 >= (int32_t)b.i32);
       break;
     case WASM_OP_I32_GE_U:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 >= b.val.i32);
+      result.i32 = (a.i32 >= b.i32);
       break;
     case WASM_OP_I32_CLZ:
-      result.val.i32 = i32_clz(b.val.i32);
+      result.i32 = i32_clz(b.i32);
       break;
     case WASM_OP_I32_CTZ:
-      result.val.i32 = i32_ctz(b.val.i32);
+      result.i32 = i32_ctz(b.i32);
       break;
     case WASM_OP_I32_POPCNT:
-      result.val.i32 = i32_popcnt(b.val.i32);
+      result.i32 = i32_popcnt(b.i32);
       break;
     case WASM_OP_I32_ADD:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 + b.val.i32);
+      result.i32 = (a.i32 + b.i32);
       break;
     case WASM_OP_I32_SUB:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 - b.val.i32);
+      result.i32 = (a.i32 - b.i32);
       break;
     case WASM_OP_I32_MUL:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 * b.val.i32);
+      result.i32 = (a.i32 * b.i32);
       break;
     case WASM_OP_I32_DIV_S: {
       a = ins->pop_value();
-      auto r = i32_div_s((int32_t)a.val.i32, (int32_t)b.val.i32);
+      auto r = i32_div_s((int32_t)a.i32, (int32_t)b.i32);
       if (r.first == false) {
         ins->trap(WASM_TRAP_REASON_SIGFPE);
         return;
       }
-      result.val.i32 = r.second;
+      result.i32 = r.second;
       break;
     }
     case WASM_OP_I32_DIV_U: {
       a = ins->pop_value();
-      auto r = i32_div_u((int32_t)a.val.i32, (int32_t)b.val.i32);
+      auto r = i32_div_u((int32_t)a.i32, (int32_t)b.i32);
       if (r.first == false) {
         ins->trap(WASM_TRAP_REASON_SIGFPE);
         return;
       }
-      result.val.i32 = r.second;
+      result.i32 = r.second;
       break;
     }
     case WASM_OP_I32_REM_S: {
       a = ins->pop_value();
-      auto r = i32_rem_s((int32_t)a.val.i32, (int32_t)b.val.i32);
+      auto r = i32_rem_s((int32_t)a.i32, (int32_t)b.i32);
       if (r.first == false) {
         ins->trap(WASM_TRAP_REASON_SIGFPE);
         return;
       }
-      result.val.i32 = r.second;
+      result.i32 = r.second;
       break;
     }
     case WASM_OP_I32_REM_U: {
       a = ins->pop_value();
-      auto r = i32_rem_u((int32_t)a.val.i32, (int32_t)b.val.i32);
+      auto r = i32_rem_u((int32_t)a.i32, (int32_t)b.i32);
       if (r.first == false) {
         ins->trap(WASM_TRAP_REASON_SIGFPE);
         return;
       }
-      result.val.i32 = r.second;
+      result.i32 = r.second;
       break;
     }
     case WASM_OP_I32_AND:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 & b.val.i32);
+      result.i32 = (a.i32 & b.i32);
       break;
     case WASM_OP_I32_OR:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 | b.val.i32);
+      result.i32 = (a.i32 | b.i32);
       break;
     case WASM_OP_I32_XOR:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 ^ b.val.i32);
+      result.i32 = (a.i32 ^ b.i32);
       break;
     case WASM_OP_I32_SHL:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 << b.val.i32);
+      result.i32 = (a.i32 << b.i32);
       break;
     case WASM_OP_I32_SHR_S:
       a = ins->pop_value();
-      result.val.i32 = ((int32_t)a.val.i32 >> b.val.i32);
+      result.i32 = ((int32_t)a.i32 >> b.i32);
       break;
     case WASM_OP_I32_SHR_U:
       a = ins->pop_value();
-      result.val.i32 = (a.val.i32 >> b.val.i32);
+      result.i32 = (a.i32 >> b.i32);
       break;
     case WASM_OP_I32_ROTL:
       a = ins->pop_value();
-      result.val.i32 = i32_rotl(a.val.i32, b.val.i32);
+      result.i32 = i32_rotl(a.i32, b.i32);
       break;
     case WASM_OP_I32_ROTR:
       a = ins->pop_value();
-      result.val.i32 = i32_rotr(a.val.i32, b.val.i32);
+      result.i32 = i32_rotr(a.i32, b.i32);
       break;
     case WASM_OP_I32_TRUNC_F64_S: {
-      auto r = i32_trunc_f64_s(b.val.f64);
+      auto r = i32_trunc_f64_s(b.f64);
       if (r.first == false) {
         ins->trap(WASM_TRAP_REASON_SIGFPE);
         return;
       }
-      result.val.i32 = r.second;
+      result.i32 = r.second;
       break;
     }
     case WASM_OP_I32_TRUNC_F64_U: {
-      auto r = i32_trunc_f64_u(b.val.f64);
+      auto r = i32_trunc_f64_u(b.f64);
       if (r.first == false) {
         ins->trap(WASM_TRAP_REASON_SIGFPE);
         return;
       }
-      result.val.i32 = r.second;
+      result.i32 = r.second;
       break;
     }
     case WASM_OP_I32_EXTEND8_S:
-      result.val.i32 = (int32_t)(int8_t)b.val.i32;
+      result.i32 = (int32_t)(int8_t)b.i32;
       break;
     case WASM_OP_I32_EXTEND16_S:
-      result.val.i32 = (int32_t)(int16_t)b.val.i32;
+      result.i32 = (int32_t)(int16_t)b.i32;
       break;
   }
   ins->push_value(result);
@@ -830,22 +830,22 @@ static void run_f64_compare(wasm_instance_t* ins, byte opcode) {
   a = ins->pop_value();
   switch (opcode) {
     case WASM_OP_F64_LT:
-      result.val.i32 = (a.val.f64 < b.val.f64);
+      result.i32 = (a.f64 < b.f64);
       break;
     case WASM_OP_F64_GT:
-      result.val.i32 = (a.val.f64 > b.val.f64);
+      result.i32 = (a.f64 > b.f64);
       break;
     case WASM_OP_F64_LE:
-      result.val.i32 = (a.val.f64 <= b.val.f64);
+      result.i32 = (a.f64 <= b.f64);
       break;
     case WASM_OP_F64_GE:
-      result.val.i32 = (a.val.f64 >= b.val.f64);
+      result.i32 = (a.f64 >= b.f64);
       break;
     case WASM_OP_F64_EQ:
-      result.val.i32 = (a.val.f64 == b.val.f64);
+      result.i32 = (a.f64 == b.f64);
       break;
     case WASM_OP_F64_NE:
-      result.val.i32 = (a.val.f64 != b.val.f64);
+      result.i32 = (a.f64 != b.f64);
       break;
   }
   ins->push_value(result);
@@ -860,16 +860,16 @@ static void run_f64_compute(wasm_instance_t* ins, byte opcode) {
   a = ins->pop_value();
   switch (opcode) {
     case WASM_OP_F64_ADD:
-      result.val.f64 = (a.val.f64 + b.val.f64);
+      result.f64 = (a.f64 + b.f64);
       break;
     case WASM_OP_F64_SUB:
-      result.val.f64 = (a.val.f64 - b.val.f64);
+      result.f64 = (a.f64 - b.f64);
       break;
     case WASM_OP_F64_MUL:
-      result.val.f64 = (a.val.f64 * b.val.f64);
+      result.f64 = (a.f64 * b.f64);
       break;
     case WASM_OP_F64_DIV:
-      result.val.f64 = (a.val.f64 / b.val.f64);
+      result.f64 = (a.f64 / b.f64);
       break;
   }
   ins->push_value(result);
@@ -882,10 +882,10 @@ static void run_f64_convert(wasm_instance_t* ins, byte opcode) {
   b = ins->pop_value();
   switch (opcode) {
     case WASM_OP_F64_CONVERT_I32_S:
-      result.val.f64 = (int32_t)b.val.i32;
+      result.f64 = (int32_t)b.i32;
       break;
     case WASM_OP_F64_CONVERT_I32_U:
-      result.val.f64 = b.val.i32;
+      result.f64 = b.i32;
       break;
   }
   ins->push_value(result);
@@ -896,41 +896,25 @@ static void run_call(wasm_instance_t* ins, byte opcode) {
   ins->push_frame(&ins->module_->funcs_[funcidx]);
 }
 
-bool is_same_type(wasm_func_decl_t* s, wasm_func_decl_t* t) {
-  if (s->args_.size() != t->args_.size()) {
-    return false;
-  }
-  if (memcmp(s->args_.data(), t->args_.data(), s->args_.size()) != 0) {
-    return false;
-  }
-  if (s->ret_.size() != t->ret_.size()) {
-    return false;
-  }
-  if (memcmp(s->ret_.data(), t->ret_.data(), s->ret_.size()) != 0) {
-    return false;
-  }
-  return true;
-}
-
 static void run_call_indirect(wasm_instance_t* ins, byte opcode) {
   ins->read_u32leb();
   uint32_t typeidx = ins->read_u32leb();
   wasm_value_t v = ins->pop_value();
-  if (v.val.i32 >= ins->table_.size() ||
+  if (v.i32 >= ins->table_.size() ||
       typeidx >= ins->module_->sigs_.size()) {
     ins->trap(WASM_TRAP_REASON_OOB);
     return;
   }
-  wasm_func_t* f = ins->table_[v.val.i32];
+  wasm_func_t* f = ins->table_[v.i32];
   if (f == nullptr) {
     ins->trap(WASM_TRAP_REASON_NULLFUNCREF);
     return;
   }
-  if (is_same_type(&ins->module_->sigs_[typeidx], f->sig_) == false) {
+  if (typeidx != f->typeidx_) {
     ins->trap(WASM_TRAP_REASON_TYPEERR);
     return;
   }
-  ins->push_frame(ins->table_[v.val.i32]);
+  ins->push_frame(ins->table_[v.i32]);
 }
 
 static void run_return(wasm_instance_t* ins, byte opcode) {
@@ -972,7 +956,7 @@ static void run_br_table(wasm_instance_t* ins, byte opcode) {
   uint32_t* cases = (uint32_t*)(ins->cur_frame_->pc_.ptr);
   wasm_value_t v = ins->pop_value();
   uint32_t to_off;
-  uint32_t index = std::min(v.val.i32, num_cases);
+  uint32_t index = std::min(v.i32, num_cases);
   to_off = cases[index];
   ins->branch(to_off);
 }

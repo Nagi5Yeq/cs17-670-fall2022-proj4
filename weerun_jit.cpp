@@ -207,7 +207,7 @@ const static size_t table_size_off = 0x20;
 const static size_t trap_off = 0x28;
 const static size_t f64_const_off = 0x30;
 
-void trap() {
+void jit_trap() {
   std::cout << "!trap" << std::endl;
   std::exit(-1);
 }
@@ -253,17 +253,17 @@ void wasm_jit_t::run_fn(uint32_t index, wasm_value_t* args, wasm_value_t* r) {
   for (size_t i = 0; i < num_args; i++) {
     if (arg_types[i] != WASM_TYPE_F64) {
       if (num_r64 < 6) {
-        reg[num_r64] = args[i].val.i64;
+        reg[num_r64] = args[i].i64;
         num_r64++;
       } else {
-        stack.push_back(args[i].val.i64);
+        stack.push_back(args[i].i64);
       }
     } else {
       if (num_f64 < 8) {
-        reg[6 + num_f64] = args[i].val.i64;
+        reg[6 + num_f64] = args[i].i64;
         num_f64++;
       } else {
-        stack.push_back(args[i].val.i64);
+        stack.push_back(args[i].i64);
       }
     }
   }
@@ -273,10 +273,10 @@ void wasm_jit_t::run_fn(uint32_t index, wasm_value_t* args, wasm_value_t* r) {
     run_void(f, reg.data(), stack.data(), stack.size());
   } else if (sig->ret_[0] != WASM_TYPE_F64) {
     run_rax_t run_rax = (run_rax_t)run_fn_;
-    r->val.i64 = run_rax(f, reg.data(), stack.data(), stack.size());
+    r->i64 = run_rax(f, reg.data(), stack.data(), stack.size());
   } else {
     run_xmm_t run_xmm = (run_xmm_t)run_fn_;
-    r->val.f64 = run_xmm(f, reg.data(), stack.data(), stack.size());
+    r->f64 = run_xmm(f, reg.data(), stack.data(), stack.size());
   }
 }
 
@@ -290,7 +290,7 @@ void wasm_jit_t::compile_instance(wasm_instance_t* ins) {
   dq((uint64_t)ins->jit_table_.data());
   dq((uint64_t)ins->memory_.size());
   dq((uint64_t)ins->jit_table_.size());
-  dq((uint64_t)trap);
+  dq((uint64_t)jit_trap);
 
   // f64 consts needed by i32.trunc, copied from GDB...
   dq(0x7fffffffffffffff);
@@ -317,7 +317,7 @@ void wasm_jit_t::compile_instance(wasm_instance_t* ins) {
   for (wasm_elem_decl_t& elem : mod_->elems_) {
     wasm_jit_table_entry_t* p = &ins_->jit_table_[elem.offset_];
     for (uint32_t funcidx : elem.funcidx_) {
-      *p = {mod_->funcs_[funcidx].typeid_, f_addr_[funcidx]};
+      *p = {mod_->funcs_[funcidx].typeidx_, f_addr_[funcidx]};
       p++;
     }
   }
@@ -1501,6 +1501,10 @@ void wasm_jit_t::restore_state(wasm_jit_ctx_t* from, wasm_jit_ctx_t* to) {
   }
   for (int i = 0; i < num_wasm_stack_dst; i++) {
     wasm_jit_loc_t loc = ctx_.stack_loc_[i];
+    wasm_jit_loc_t to_loc = tmp_to.stack_loc_[i];
+    if (loc == to_loc) {
+      continue;
+    }
     if (loc.type == reg::in_reg) {
       if (loc.index < reg::xmm0) {
         // r -> m
@@ -1518,6 +1522,10 @@ void wasm_jit_t::restore_state(wasm_jit_ctx_t* from, wasm_jit_ctx_t* to) {
   // save all local variables, local variables have fixed stack pos
   for (int i = 0; i < num_wasm_local; i++) {
     wasm_jit_loc_t loc = ctx_.local_loc_[i];
+    wasm_jit_loc_t to_loc = tmp_to.local_loc_[i];
+    if (loc == to_loc) {
+      continue;
+    }
     if (loc.type == reg::in_reg) {
       rbp_save_r(i + 6, loc.index);
     }
@@ -1525,6 +1533,10 @@ void wasm_jit_t::restore_state(wasm_jit_ctx_t* from, wasm_jit_ctx_t* to) {
   // restore stack variables
   for (int i = 0; i < num_wasm_stack_dst; i++) {
     wasm_jit_loc_t loc = tmp_to.stack_loc_[i];
+    wasm_jit_loc_t from_loc = ctx_.stack_loc_[i];
+    if (loc == from_loc) {
+      continue;
+    }
     if (loc.type == reg::in_reg) {
       if (loc.index < reg::xmm0) {
         // r -> m
@@ -1545,6 +1557,10 @@ void wasm_jit_t::restore_state(wasm_jit_ctx_t* from, wasm_jit_ctx_t* to) {
   // restore local variables
   for (int i = 0; i < num_wasm_local; i++) {
     wasm_jit_loc_t loc = tmp_to.local_loc_[i];
+    wasm_jit_loc_t from_loc = ctx_.local_loc_[i];
+    if (loc == from_loc) {
+      continue;
+    }
     if (loc.type == reg::in_reg) {
       rbp_load_r(i + 6, loc.index, local_types_[i]);
     }

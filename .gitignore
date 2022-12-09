@@ -1,5 +1,6 @@
 *.o
 weerun
+weeify
 .vscode
 xbyak_github
 .gdb_history

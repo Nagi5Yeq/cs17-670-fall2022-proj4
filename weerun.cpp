@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 
 #include "common.h"
 #include "ir.h"
@@ -13,7 +14,7 @@ extern uint32_t jit_check;
 
 // Initialize the runtime functions.
 void init_runtime();
-void init_libc_runtime();
+void init_env_runtime();
 
 // Disassembles? and runs a wasm module.
 wasm_typed_value_t run(const byte* start,
@@ -63,7 +64,7 @@ int main(int argc, char* argv[]) {
         }
       }
       init_runtime();
-      init_libc_runtime();
+      init_env_runtime();
       wasm_typed_value_t result = run(start, end, num_args, args);
       unload_file(&start, &end);
       print_wasm_value(result);

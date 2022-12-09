@@ -26,25 +26,24 @@ wasm_value_t parse_wasm_value(char* str) {
         return wasm_i32_value(result);
     }
   }
-  wasm_value_t orig_string = {
-      .val.ref = str,
-  };
+  wasm_value_t orig_string;
+  orig_string.ref = str;
   return orig_string;
 }
 
 void print_wasm_value(wasm_typed_value_t val) {
   switch (val.tag) {
     case I32:
-      printf("%d", val.val.val.i32);
+      printf("%d", val.val.i32);
       break;
     case F64:
-      printf("%lf", val.val.val.f64);
+      printf("%lf", val.val.f64);
       break;
     case EXTERNREF:
-      if (val.val.val.ref == NULL)
+      if (val.val.ref == NULL)
         printf("null");
       else
-        printf("%p", val.val.val.ref);
+        printf("%p", val.val.ref);
       break;
   }
 }
@@ -52,37 +51,34 @@ void print_wasm_value(wasm_typed_value_t val) {
 void trace_wasm_value(wasm_typed_value_t val) {
   switch (val.tag) {
     case I32:
-      TRACE("%d", val.val.val.i32);
+      TRACE("%d", val.val.i32);
       break;
     case F64:
-      TRACE("%lf", val.val.val.f64);
+      TRACE("%lf", val.val.f64);
       break;
     case EXTERNREF:
-      if (val.val.val.ref == NULL)
+      if (val.val.ref == NULL)
         printf("null");
       else
-        TRACE("%p", val.val.val.ref);
+        TRACE("%p", val.val.ref);
       break;
   }
 }
 
 wasm_value_t wasm_i32_value(int32_t val) {
-  wasm_value_t r = {
-      .val.i32 = val,
-  };
+  wasm_value_t r;
+  r.i32 = val;
   return r;
 }
 
 wasm_value_t wasm_f64_value(double val) {
-  wasm_value_t r = {
-      .val.f64 = val,
-  };
+  wasm_value_t r;
+  r.f64 = val;
   return r;
 }
 
 wasm_value_t wasm_ref_value(void* val) {
-  wasm_value_t r = {
-      .val.ref = val,
-  };
+  wasm_value_t r;
+  r.ref = val;
   return r;
 }
