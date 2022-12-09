@@ -212,8 +212,8 @@ void trap() {
   std::exit(-1);
 }
 
-wasm_jit_t::wasm_jit_t(uint64_t code_size)
-    : CodeGenerator(code_size), enable_check_(true) {
+wasm_jit_t::wasm_jit_t(uint64_t code_size, bool check)
+    : CodeGenerator(code_size), enable_check_(check) {
   size_t pos = getSize();
   endbr64();
   push(rbp);

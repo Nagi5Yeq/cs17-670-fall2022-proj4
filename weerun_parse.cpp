@@ -78,7 +78,11 @@ extern "C" wasm_module_t* parse(buffer_t* buf) {
 }
 
 wasm_instance_t* active_instance;
-uint32_t jit = 1;
+
+uint32_t jit_enable = 1;
+uint32_t jit_check = 1;
+
+static uint64_t default_code_size = (1 << 20);
 
 extern "C" wasm_typed_value_t run(const byte* start,
                                   const byte* end,
@@ -88,7 +92,7 @@ extern "C" wasm_typed_value_t run(const byte* start,
   wasm_module_t* module = parse(&onstack_buf);
   wasm_instance_t* instance = module->create_instance();
   wasm_value_t result;
-  if (jit != 0) {
+  if (jit_enable != 0) {
     result =
         instance->run_jit(std::vector<wasm_value_t>(args, args + num_args));
   } else {
@@ -334,7 +338,7 @@ wasm_value_t wasm_instance_t::run(std::vector<wasm_value_t> args) {
 }
 
 wasm_value_t wasm_instance_t::run_jit(std::vector<wasm_value_t> args) {
-  wasm_jit_t jit(1 << 20);  // 1M code size
+  wasm_jit_t jit(default_code_size, jit_check != 0);  // 1M code size
   jit.compile_instance(this);
 
   active_instance = this;

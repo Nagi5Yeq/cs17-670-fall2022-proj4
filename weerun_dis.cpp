@@ -275,7 +275,7 @@ std::vector<wasm_code_decl_t> decode_vector_code_decl(buffer_t* buf,
   std::vector<wasm_code_decl_t> result;
   uint32_t num_elem = read_u32leb(buf);
   for (uint32_t i = 0; i < num_elem; i++) {
-    if (jit != 0) {
+    if (jit_enable != 0) {
       result.push_back(decode_code_decl_jit(buf, module));
     } else {
       result.push_back(decode_code_decl(buf, module));

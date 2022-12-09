@@ -8,6 +8,9 @@
 #include "ir.h"
 #include "weewasm.h"
 
+extern uint32_t jit_enable;
+extern uint32_t jit_check;
+
 // Initialize the runtime functions.
 void init_runtime();
 void init_libc_runtime();
@@ -31,6 +34,14 @@ int main(int argc, char* argv[]) {
     }
     if (strcmp(arg, "-disassemble") == 0) {
       g_disassemble = 1;
+      continue;
+    }
+    if (strcmp(arg, "-no-jit") == 0) {
+      jit_enable = 0;
+      continue;
+    }
+    if (strcmp(arg, "-no-jit-check") == 0) {
+      jit_check = 0;
       continue;
     }
 

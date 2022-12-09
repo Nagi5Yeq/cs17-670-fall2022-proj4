@@ -130,7 +130,7 @@ struct wasm_jit_t : public Xbyak::CodeGenerator {
   };
   std::vector<block_t> block_stack_;
 
-  wasm_jit_t(uint64_t code_size);
+  wasm_jit_t(uint64_t code_size, bool check);
 
   void compile_instance(wasm_instance_t* ins);
   void emit_runtime_functions();

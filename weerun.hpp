@@ -252,4 +252,5 @@ struct wasm_e_box_t : public wasm_externref_t {
 };
 
 extern wasm_instance_t* active_instance;
-extern uint32_t jit;
+extern "C" uint32_t jit_enable;
+extern "C" uint32_t jit_check;
