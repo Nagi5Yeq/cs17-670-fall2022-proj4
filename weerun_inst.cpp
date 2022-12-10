@@ -123,23 +123,28 @@ const struct wasm_inst_desc_t g_inst_desc[] = {
     INVALID_INST,
     INVALID_INST,
     {WASM_OP_I32_STORE, WASM_INST_TYPE_MEMARG, "i32.store", run_i32_store,
-     &wasm_jit_t::emit_i32_store},
-    INVALID_INST,
+     &wasm_jit_t::emit_i64_store},
+    {WASM_OP_I32_STORE, WASM_INST_TYPE_MEMARG, "i64.store", run_i32_store,
+     &wasm_jit_t::emit_i64_store},
     INVALID_INST,
     {WASM_OP_F64_STORE, WASM_INST_TYPE_MEMARG, "f64.store", run_f64_store,
      &wasm_jit_t::emit_f64_store},
     {WASM_OP_I32_STORE8, WASM_INST_TYPE_MEMARG, "i32.store8", run_i32_store8,
-     &wasm_jit_t::emit_i32_store},
+     &wasm_jit_t::emit_i64_store},
     {WASM_OP_I32_STORE16, WASM_INST_TYPE_MEMARG, "i32.store16", run_i32_store16,
-     &wasm_jit_t::emit_i32_store},
-    INVALID_INST,
-    INVALID_INST,
-    INVALID_INST,
+     &wasm_jit_t::emit_i64_store},
+    {WASM_OP_I32_STORE16, WASM_INST_TYPE_MEMARG, "i64.store8", run_i32_store16,
+     &wasm_jit_t::emit_i64_store},
+    {WASM_OP_I32_STORE16, WASM_INST_TYPE_MEMARG, "i64.store16", run_i32_store16,
+     &wasm_jit_t::emit_i64_store},
+    {WASM_OP_I32_STORE16, WASM_INST_TYPE_MEMARG, "i64.store32", run_i32_store16,
+     &wasm_jit_t::emit_i64_store},
     INVALID_INST,
     INVALID_INST,
     {WASM_OP_I32_CONST, WASM_INST_TYPE_S32, "i32.const", run_i32_const,
      &wasm_jit_t::emit_i32_const},
-    INVALID_INST,
+    {WASM_OP_I32_CONST, WASM_INST_TYPE_S32, "i64.const", run_i32_const,
+     &wasm_jit_t::emit_i64_const},
     INVALID_INST,
     {WASM_OP_F64_CONST, WASM_INST_TYPE_F64, "f64.const", run_f64_const,
      &wasm_jit_t::emit_f64_const},
@@ -430,7 +435,7 @@ template <typename T>
 static inline bool check_access(wasm_instance_t* ins,
                                 uint32_t offset,
                                 uint32_t addend) {
-  uint32_t size = ins->memory_.size();
+  uint32_t size = ins->memory_size_;
   return offset <= size && addend <= size &&
          offset + addend + sizeof(T) <= size;
 }
@@ -900,8 +905,7 @@ static void run_call_indirect(wasm_instance_t* ins, byte opcode) {
   ins->read_u32leb();
   uint32_t typeidx = ins->read_u32leb();
   wasm_value_t v = ins->pop_value();
-  if (v.i32 >= ins->table_.size() ||
-      typeidx >= ins->module_->sigs_.size()) {
+  if (v.i32 >= ins->table_.size() || typeidx >= ins->module_->sigs_.size()) {
     ins->trap(WASM_TRAP_REASON_OOB);
     return;
   }

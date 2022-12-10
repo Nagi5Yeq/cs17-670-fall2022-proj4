@@ -288,7 +288,7 @@ void wasm_jit_t::compile_instance(wasm_instance_t* ins) {
   dq((uint64_t)ins->memory_.data());
   dq((uint64_t)ins->globals_.data());
   dq((uint64_t)ins->jit_table_.data());
-  dq((uint64_t)ins->memory_.size());
+  dq((uint64_t)ins->memory_size_);
   dq((uint64_t)ins->jit_table_.size());
   dq((uint64_t)jit_trap);
 
@@ -918,6 +918,7 @@ void wasm_jit_t::emit_i32_load() {
     pop(to_xbyak_r64(offset));
     e = to_xbyak_r64(m) + to_xbyak_r64(offset);
   } else {
+    mov(to_xbyak_r32(offset), to_xbyak_r32(offset));
     e = to_xbyak_r64(m) + to_xbyak_r64(offset) + (int32_t)addend;
   }
   switch (opcode_) {
@@ -971,6 +972,7 @@ void wasm_jit_t::emit_f64_load() {
     pop(to_xbyak_r64(offset));
     e = to_xbyak_r64(m) + to_xbyak_r64(offset);
   } else {
+    mov(to_xbyak_r32(offset), to_xbyak_r32(offset));
     e = to_xbyak_r64(m) + to_xbyak_r64(offset) + (int32_t)addend;
   }
   movsd(to_xbyak_xmm(xmm), qword[e]);
@@ -978,21 +980,44 @@ void wasm_jit_t::emit_f64_load() {
   release_r(offset);
 }
 
-void wasm_jit_t::emit_i32_store() {
+void wasm_jit_t::emit_i64_store() {
   read_u32leb(&buf_);
   uint32_t addend = read_u32leb(&buf_);
   uint32_t v_size = 4;
+  uint8_t v_type = WASM_TYPE_I32;
   switch (opcode_) {
+    case WASM_OP_I64_STORE:
+      v_type = WASM_TYPE_I64;
+      v_size = 8;
+      break;
+    case WASM_OP_I64_STORE32:
+      v_type = WASM_TYPE_I64;
+      v_size = 4;
+      break;
+    case WASM_OP_I64_STORE16:
+      v_type = WASM_TYPE_I64;
+      v_size = 2;
+      break;
+    case WASM_OP_I64_STORE8:
+      v_type = WASM_TYPE_I64;
+      v_size = 1;
+      break;
+    case WASM_OP_I32_STORE:
+      v_type = WASM_TYPE_I32;
+      v_size = 4;
+      break;
     case WASM_OP_I32_STORE16:
+      v_type = WASM_TYPE_I32;
       v_size = 2;
       break;
     case WASM_OP_I32_STORE8:
+      v_type = WASM_TYPE_I32;
       v_size = 1;
       break;
     default:
       break;
   }
-  int32_t v = pop_r(WASM_TYPE_I32);
+  int32_t v = pop_r(v_type);
   int32_t offset = pop_r(WASM_TYPE_I32);
   int32_t m = alloc_memory_base();
   Xbyak::RegExp e;
@@ -1019,17 +1044,26 @@ void wasm_jit_t::emit_i32_store() {
     pop(to_xbyak_r64(offset));
     e = to_xbyak_r64(m) + to_xbyak_r64(offset);
   } else {
+    mov(to_xbyak_r32(offset), to_xbyak_r32(offset));
     e = to_xbyak_r64(m) + to_xbyak_r64(offset) + (int32_t)addend;
   }
   switch (opcode_) {
+    case WASM_OP_I64_STORE:
+      mov(qword[e], to_xbyak_r64(v));
+      break;
+    case WASM_OP_I64_STORE32:
+    case WASM_OP_I32_STORE:
+      mov(dword[e], to_xbyak_r32(v));
+      break;
+    case WASM_OP_I64_STORE16:
     case WASM_OP_I32_STORE16:
       mov(word[e], to_xbyak_r16(v));
       break;
+    case WASM_OP_I64_STORE8:
     case WASM_OP_I32_STORE8:
       mov(byte[e], to_xbyak_r8(v));
       break;
     default:
-      mov(dword[e], to_xbyak_r32(v));
       break;
   }
   release_r(offset);
@@ -1067,6 +1101,7 @@ void wasm_jit_t::emit_f64_store() {
     movsxd(to_xbyak_r64(offset), to_xbyak_r32(offset));
     e = to_xbyak_r64(m) + to_xbyak_r64(offset);
   } else {
+    mov(to_xbyak_r32(offset), to_xbyak_r32(offset));
     e = to_xbyak_r64(m) + to_xbyak_r64(offset) + (int32_t)addend;
   }
   movsd(qword[e], to_xbyak_xmm(v));
@@ -1136,7 +1171,6 @@ void wasm_jit_t::emit_i32_numeric() {
       L(".ctz_done");
       push_r(b);
       outLocalLabel();
-      push_r(b);
       break;
     case WASM_OP_I32_POPCNT:
       b = pop_r(WASM_TYPE_I32);
@@ -1276,9 +1310,16 @@ void wasm_jit_t::emit_i32_shift() {
 }
 
 void wasm_jit_t::emit_i32_const() {
-  uint32_t x = read_i32leb(&buf_);
+  int32_t x = read_i32leb(&buf_);
   int32_t r = alloc_r(JIT_V_INTER, WASM_TYPE_I32);
   mov(to_xbyak_r32(r), x);
+  push_r(r);
+}
+
+void wasm_jit_t::emit_i64_const() {
+  int64_t x = read_i64leb(&buf_);
+  int32_t r = alloc_r(JIT_V_INTER, WASM_TYPE_I64);
+  mov(to_xbyak_r64(r), x);
   push_r(r);
 }
 
@@ -1676,7 +1717,7 @@ void wasm_jit_t::emit_f64_compute() {
     case WASM_OP_F64_CONVERT_I32_U:
       b = pop_r(WASM_TYPE_I64);
       r = alloc_r(JIT_V_INTER, WASM_TYPE_F64);
-      mov(to_xbyak_r64(b), to_xbyak_r64(b));
+      mov(to_xbyak_r32(b), to_xbyak_r32(b));
       cvtsi2sd(to_xbyak_xmm(r), to_xbyak_r64(b));
       push_r(r);
       release_r(b);
@@ -1724,7 +1765,7 @@ void wasm_jit_t::emit_br_table() {
       std::string jmp_label = "F" + std::to_string(funcidx_) + "L" +
                               std::to_string(b->index) + "T" +
                               std::to_string(t);
-      jmp(jmp_label);
+      jmp(jmp_label, T_NEAR);
       b->br_ctxs.push_back(ctx_);
     } else {
       table_offsets[i] = result->second;

@@ -199,9 +199,10 @@ struct wasm_jit_t : public Xbyak::CodeGenerator {
   void emit_global_set();
   void emit_i32_load();
   void emit_f64_load();
-  void emit_i32_store();
+  void emit_i64_store();
   void emit_f64_store();
   void emit_i32_const();
+  void emit_i64_const();
   void emit_f64_const();
   void emit_i32_numeric();
   void emit_i32_shift();

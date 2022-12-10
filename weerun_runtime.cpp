@@ -162,9 +162,9 @@ static void weewasm_obj_eq(wasm_instance_t* ins) {
   wasm_value_t lhs = ins->pop_value();
   wasm_value_t v;
   v.i32 = (convert_key((wasm_externref_t*)lhs.ref) ==
-               convert_key((wasm_externref_t*)rhs.ref))
-                  ? 1
-                  : 0;
+           convert_key((wasm_externref_t*)rhs.ref))
+              ? 1
+              : 0;
   ins->push_value(v);
 }
 
@@ -230,7 +230,7 @@ static uint32_t weewasm_obj_eq_jit(wasm_externref_t* lhs,
   return (convert_key(lhs) == convert_key(rhs)) ? 1 : 0;
 }
 
- void init_runtime() {
+void init_runtime() {
   g_runtime_funcs["weewasm.puti"] = {weewasm_puti, (void*)weewasm_puti_jit};
   g_runtime_funcs["weewasm.putd"] = {weewasm_putd, (void*)weewasm_putd_jit};
   g_runtime_funcs["weewasm.puts"] = {weewasm_puts, (void*)weewasm_puts_jit};
@@ -285,12 +285,89 @@ int32_t env_time_jit() {
   return std::time(nullptr);
 }
 
- void init_env_runtime() {
-  g_runtime_funcs["libc.sin"] = {
+int32_t env_memcmp_jit(uint32_t s1, uint32_t s2, size_t n) {
+  byte* base = active_instance->memory_.data();
+  return std::memcmp(base + s1, base + s2, n);
+}
+
+uint32_t env_memcpy_jit(uint32_t dst, uint32_t src, size_t n) {
+  byte* base = active_instance->memory_.data();
+  void* r = std::memcpy(base + dst, base + src, n);
+  return (byte*)r - base;
+}
+
+uint32_t env_memmove_jit(uint32_t dst, uint32_t src, size_t n) {
+  byte* base = active_instance->memory_.data();
+  void* r = std::memmove(base + dst, base + src, n);
+  return (byte*)r - base;
+}
+
+uint32_t env_memset_jit(uint32_t s, int c, size_t n) {
+  byte* base = active_instance->memory_.data();
+  void* r = std::memset(base + s, c, n);
+  return (byte*)r - base;
+}
+
+struct wasm_memory_base_t {
+  byte* base;
+
+  wasm_memory_base_t() : base(active_instance->memory_.data()) {}
+
+  template <typename T>
+  T get(uint32_t offset) {
+    return (T)(base + offset);
+  }
+};
+
+static std::map<uint32_t, FILE*> opened_file = {{0, stdin},
+                                                {1, stdout},
+                                                {2, stderr}};
+static uint32_t next_fd = 3;
+
+uint32_t env_fopen_jit(uint32_t filename, uint32_t modes) {
+  wasm_memory_base_t base;
+  FILE* f =
+      std::fopen(base.get<const char*>(filename), base.get<const char*>(modes));
+  opened_file[next_fd] = f;
+  return next_fd++;
+}
+
+size_t env_fread_jit(uint32_t ptr, size_t size, size_t n, uint32_t stream) {
+  wasm_memory_base_t base;
+  return std::fread(base.get<void*>(ptr), size, n, opened_file[stream]);
+}
+
+size_t env_fwrite_jit(uint32_t ptr, size_t size, size_t n, uint32_t stream) {
+  wasm_memory_base_t base;
+  return std::fwrite(base.get<void*>(ptr), size, n, opened_file[stream]);
+}
+
+int env_fclose_jit(uint32_t stream) {
+  return std::fclose(opened_file[stream]);
+}
+
+uint32_t env_alloc_memory_jit(size_t size) {
+  size = ((size + 15) / 16) * 16;
+  byte* r = active_instance->heap_end_;
+  active_instance->heap_end_ += size;
+  return r - active_instance->memory_.data();
+}
+
+void init_env_runtime() {
+  g_runtime_funcs["env.sin"] = {
       env_sin, (void*)static_cast<double (*)(double)>(std::sin)};
-  g_runtime_funcs["libc.cos"] = {
+  g_runtime_funcs["env.cos"] = {
       env_cos, (void*)static_cast<double (*)(double)>(std::cos)};
-  g_runtime_funcs["libc.rand"] = {env_rand, (void*)std::rand};
-  g_runtime_funcs["libc.time"] = {env_time, (void*)env_time_jit};
-  g_runtime_funcs["libc.srand"] = {env_srand, (void*)std::srand};
+  g_runtime_funcs["env.rand"] = {env_rand, (void*)std::rand};
+  g_runtime_funcs["env.time"] = {env_time, (void*)env_time_jit};
+  g_runtime_funcs["env.srand"] = {env_srand, (void*)std::srand};
+  g_runtime_funcs["env.memcmp"] = {nullptr, (void*)env_memcmp_jit};
+  g_runtime_funcs["env.memcpy"] = {nullptr, (void*)env_memcpy_jit};
+  g_runtime_funcs["env.memmove"] = {nullptr, (void*)env_memmove_jit};
+  g_runtime_funcs["env.memset"] = {nullptr, (void*)env_memset_jit};
+  g_runtime_funcs["env.fopen"] = {nullptr, (void*)env_fopen_jit};
+  g_runtime_funcs["env.fread"] = {nullptr, (void*)env_fread_jit};
+  g_runtime_funcs["env.fwrite"] = {nullptr, (void*)env_fwrite_jit};
+  g_runtime_funcs["env.fclose"] = {nullptr, (void*)env_fclose_jit};
+  g_runtime_funcs["env.alloc_memory"] = {nullptr, (void*)env_alloc_memory_jit};
 }

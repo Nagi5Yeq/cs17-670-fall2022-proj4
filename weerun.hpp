@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "common.h"
-#include "illegal.h"
 #include "ir.h"
 #include "weewasm.h"
 
@@ -141,6 +140,8 @@ struct wasm_jit_table_entry_t {
   uint8_t* addr;
 };
 
+const uint32_t wasm_heap_size = (1 << 30);
+
 struct wasm_instance_t {
   wasm_module_t* module_;
   std::vector<byte> memory_;
@@ -150,6 +151,8 @@ struct wasm_instance_t {
   std::vector<wasm_value_t> value_stack_;
   std::vector<wasm_stack_frame_t> frames_;
   wasm_stack_frame_t* cur_frame_;
+  byte* heap_end_;
+  size_t memory_size_;
   uint32_t trapped;
 
   void run_function(uint32_t funcidx);

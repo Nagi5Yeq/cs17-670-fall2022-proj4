@@ -26,7 +26,7 @@ void parse_element_section(wasm_module_t* module, buffer_t* buf);
 void parse_code_section(wasm_module_t* module, buffer_t* buf);
 void parse_data_section(wasm_module_t* module, buffer_t* buf);
 
- wasm_module_t* parse(buffer_t* buf) {
+wasm_module_t* parse(buffer_t* buf) {
   buf->ptr += 8;  // magic and version
   wasm_module_t* module = new wasm_module_t();
   module->num_import_funcs_ = 0;
@@ -79,15 +79,15 @@ void parse_data_section(wasm_module_t* module, buffer_t* buf);
 
 wasm_instance_t* active_instance;
 
-uint32_t jit_enable = 0;
-uint32_t jit_check = 1;
+uint32_t jit_enable = 1;
+uint32_t jit_check = 0;
 
 static uint64_t default_code_size = (1 << 20);
 
- wasm_typed_value_t run(const byte* start,
-                                  const byte* end,
-                                  uint32_t num_args,
-                                  wasm_value_t* args) {
+wasm_typed_value_t run(const byte* start,
+                       const byte* end,
+                       uint32_t num_args,
+                       wasm_value_t* args) {
   buffer_t onstack_buf = {start, start, end};
   wasm_module_t* module = parse(&onstack_buf);
   wasm_instance_t* instance = module->create_instance();
@@ -222,11 +222,15 @@ wasm_instance_t* wasm_module_t::create_instance() {
   instance->module_ = this;
 
   // initialize memory using data
-  instance->memory_.resize(mem_limits_.init_ * wasm_page_size, 0);
+  instance->memory_.resize(mem_limits_.init_ * wasm_page_size + wasm_heap_size,
+                           0);
   for (wasm_data_decl_t& data : datas_) {
     byte* mem = instance->memory_.data();
     std::memcpy(mem + data.offset_, data.data_.data(), data.data_.size());
   }
+  instance->memory_size_ = mem_limits_.init_ * wasm_page_size;
+  instance->heap_end_ =
+      instance->memory_.data() + mem_limits_.init_ * wasm_page_size;
 
   // initialize global variables
   instance->globals_.resize(globals_.size());
